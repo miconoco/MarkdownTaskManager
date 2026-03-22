@@ -1473,9 +1473,9 @@
         document.addEventListener('DOMContentLoaded', updateStaticTexts);
 
         // Check if File System Access API is supported
-        if (!('showDirectoryPicker' in window)) {
-            alert(t('alert.browserNotSupported'));
-        }
+        //if (!('showDirectoryPicker' in window)) {
+        //    alert(t('alert.browserNotSupported'));
+        //}
 
         // IndexedDB for persisting directory handles (multiple projects)
         const DB_NAME = 'TaskManagerDB';
@@ -1805,13 +1805,13 @@
         document.getElementById('selectFolderBtn').addEventListener('click', async () => {
             try {
                 // Start in last used directory if available
-                const options = {};
-                if (directoryHandle) {
-                    options.startIn = directoryHandle;
-                }
+                //const options = {};
+                //if (directoryHandle) {
+                //    options.startIn = directoryHandle;
+                //}
 
-                directoryHandle = await window.showDirectoryPicker(options);
-                await saveDirectoryHandle(directoryHandle); // Save for next time
+                //directoryHandle = await window.showDirectoryPicker(options);
+                //await saveDirectoryHandle(directoryHandle); // Save for next time
                 await loadKanbanFile();
 
                 document.getElementById('welcomeScreen').style.display = 'none';
@@ -1836,10 +1836,8 @@
         // Load kanban.md file
         async function loadKanbanFile() {
             try {
-                kanbanFileHandle = await directoryHandle.getFileHandle('kanban.md');
-                const file = await kanbanFileHandle.getFile();
-                currentKanbanContent = await file.text();
-
+                const response = await fetch('/download/kanban.md');
+                currentKanbanContent = await response.text();
                 console.log('File loaded, size:', currentKanbanContent.length);
                 parseMarkdown(currentKanbanContent);
                 await loadArchive(); // Load archive for historical autocomplete data
@@ -2294,14 +2292,26 @@ ${t('markdown.archiveSection')}
 
         // Auto-save function
         async function autoSave() {
-            if (!kanbanFileHandle) return;
+            console.log('Auto-saved');
+            //if (!kanbanFileHandle) return;
             try {
                 const newContent = generateMarkdown();
-                const writable = await kanbanFileHandle.createWritable();
-                await writable.write(newContent);
-                await writable.close();
+                const formData = new FormData();
+                formData.append('file', newContent);
+                 const response = await fetch('/upload/kanban.md', {
+                    method: 'POST',
+                    body: formData, // Automatically sets Content-Type: multipart/form-data
+                });
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                const result = await response.json();
+
+                //const writable = await kanbanFileHandle.createWritable();
+                //await writable.write(newContent);
+                //await writable.close();
                 currentKanbanContent = newContent;
-                console.log('Auto-saved');
+                console.log('Auto-saved: ', result);
             } catch (error) {
                 console.error('Auto-save failed:', error);
             }
@@ -3091,11 +3101,14 @@ ${t('markdown.archiveSection')}
         async function loadArchive() {
             console.log('🗃️ === LOADING ARCHIVE ===');
             try {
-                archiveFileHandle = await directoryHandle.getFileHandle('archive.md');
+                const response = await fetch('/download/archive.md');
                 console.log('✓ Archive file handle obtained');
-                const file = await archiveFileHandle.getFile();
-                console.log('✓ Archive file loaded, size:', file.size, 'bytes');
-                const content = await file.text();
+                const content  = await response.text();
+
+                //archiveFileHandle = await directoryHandle.getFileHandle('archive.md');
+                //const file = await archiveFileHandle.getFile();
+                //console.log('✓ Archive file loaded, size:', file.size, 'bytes');
+                //const content = await file.text();
                 console.log('✓ Archive content read, length:', content.length, 'characters');
                 console.log('Archive content preview:', content.substring(0, 500));
 
@@ -3116,9 +3129,6 @@ ${t('markdown.archiveSection')}
         }
 
         async function saveArchive() {
-            if (!archiveFileHandle) {
-                archiveFileHandle = await directoryHandle.getFileHandle('archive.md', { create: true });
-            }
 
             let md = `${t('markdown.archiveTitle')}\n\n${t('markdown.archiveDesc')}\n\n${t('markdown.archiveSection')}\n\n`;
             archivedTasks.forEach(task => {
@@ -3147,10 +3157,16 @@ ${t('markdown.archiveSection')}
                 }
                 md += `\n`;
             });
-
-            const writable = await archiveFileHandle.createWritable();
-            await writable.write(md);
-            await writable.close();
+            const formData = new FormData();
+            formData.append('file', md);
+            const response = await fetch('/upload/archive.md', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+            }
+            await response.json();
         }
 
         function archiveCurrentTask() {
