@@ -1335,3 +1335,8 @@ open ~/tools/task-manager.html
 ---
 
 **🎉 You're ready! Start organizing your tasks now.**
+
+# Competitors
+
+- <https://github.com/chr15m/kanban-todo>
+- <https://github.com/sergi039/obsidian-kanban-app>
